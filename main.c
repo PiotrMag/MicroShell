@@ -83,6 +83,12 @@ void test_string_list() {
 
 int main(int argc, char *argv[]) {
 
+    // wypisanie argumentow
+    int n;
+    for (n = 0; n < argc; n++) {
+        printf("%s ", argv[n]);
+    }
+
     // zmienne potrzebne do przechowywania elementow polecenia (do parsowania)
     char **arr = NULL;
     int max_arr_size = 0, current_arr_size = 0;

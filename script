@@ -1,0 +1,2 @@
+#!/home/tom/Desktop/SO/project/a.out -arg -arg2
+grep "test" -d >> text.txt
