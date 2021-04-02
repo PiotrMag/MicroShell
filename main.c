@@ -1,5 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
+#include <ctype.h>
 
 /*
 Funkcja dodajaca element do tablicy i ewentualnie 
@@ -22,6 +24,33 @@ int add_element_to_array(char ***arr, int *max_arr_size, int *current_arr_size, 
     // dodanie nowego elementu na odpowiednie miejsce
     (*arr)[*current_arr_size] = new_element; //TODO: naprawic
     (*current_arr_size) += 1;
+    return 0;
+}
+
+/*
+Funkcja dodajaca znak do danego char*
+*/
+int add_char_to_string(char **str, int *length, char *new_char) {
+    // sprawdzenie, czy obecnie string jest pusty
+    if (*str == NULL || length == 0) {
+        char *new_str = realloc((*str), sizeof(char));
+        if (new_str == NULL) {
+            return -1;
+        }
+        (*str) = new_str;
+        (*str)[0] = '\0';
+        *length = 1;
+    }
+    int new_size = (*length) + 1;
+    char *new_str = realloc((*str), sizeof(char) * new_size);
+    if (new_str == NULL) {
+        return -1;
+    }
+    (*str) = new_str;
+    // dodanie znaku na koniec
+    (*str)[*length-1] = *new_char;
+    (*str)[*length] = '\0';
+    *length = new_size;
     return 0;
 }
 
@@ -55,8 +84,40 @@ void test_string_list() {
 int main(int argc, char *argv[]) {
 
     // zmienne potrzebne do przechowywania elementow polecenia (do parsowania)
-    // char **arr;
-    // int max_arr_size = 0, current_arr_size = 0;
-    test_string_list();
-    return 0;
+    char **arr = NULL;
+    int max_arr_size = 0, current_arr_size = 0;
+
+    // czytanie elemento polecenia
+    char *current_string = NULL;
+    int current_string_length = 0;
+    char one_char;
+    do {
+        one_char = fgetc(stdin);
+        if (ferror(stdin)) { // jezeli wystapil blad przy czytaniu znaku z stdin
+            perror("Blad przy wczytywaniu znaku z stdin:");
+            return EXIT_FAILURE;
+        }
+        if (one_char == ' ' || one_char == '\n' || one_char == EOF) { // jezeli wczytano odpowiedni znak, to nalezy uznac, ze jest to koniec elementu
+            if (current_string != NULL && current_string != "" /*&& !isspace(current_string)*/) {
+                int result = add_element_to_array(&arr, &max_arr_size, &current_arr_size, current_string);
+                if (result == -1) { // byl blad przy probie dodania elementu do tablicy
+                    printf("Byl blad przy dodawaniu elementu do tablicy (main loop)");
+                    return EXIT_FAILURE;
+                }
+            }
+            current_string = NULL;
+        }
+        if (one_char == '\n' || one_char == EOF) { // jezeli wczytano \n lub EOF to nalezy wkonac polecenie
+            //TODO: wykonywanie polecenia
+        } else if (one_char != ' ') { // jezeli byl wczytany inny znak, to nalezy go dodac do [current_string]
+            add_char_to_string(&current_string, &current_string_length, &one_char);
+        }
+    } while (one_char != EOF);
+
+    int i; 
+    for (i = 0; i < current_arr_size; i++) {
+        printf("%s\n", arr[i]);
+    }
+    
+    return EXIT_SUCCESS;
 }
