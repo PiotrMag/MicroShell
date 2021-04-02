@@ -35,3 +35,5 @@
 - Jaka jest kolejnosc wykonywania operatorow `>>` oraz `|`
 - Czy w C jest biblioteka do latwego parsowania `string`
     - Mozna skorzystac z `strtok` w celu rozdzielenia polecenia a poszczegolne skladowe
+- Jak zrobic dynamiczna liste `string`
+    - `realloc`
