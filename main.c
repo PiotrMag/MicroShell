@@ -89,6 +89,24 @@ int main(int argc, char *argv[]) {
         printf("%s ", argv[n]);
     }
 
+    //! prawdopodobnie trzeba tylko sprawdzic, czy podany argument jest nazwa pliku
+    //! jezeli tak, to odpowiednio przekirowac stdin, zeby wczytywalo z pliku
+    //! mozliwe, ze trzeba bedzie w jakis sopsob przekierowac pozostale argumenty
+    //! jako standardowe wejscie, ale to trzeba jeszcze zbadac
+    // wlaczenie odpowiedniej wersji programu na bazie ilosci przekazanych argumentow
+    if (argc <= 1) { 
+        //todo: wlaczenie programu w trybie interaktywnym (standardowe wejscie jest z konsoli, czyli pewnie nie trzeba nic zmieniac)
+    } else if ( argc <= 2) {
+        //todo: sprawdzic, czy podany argument jest plikiem, czy poleceniem
+        // if (plik) {
+        //     //todo: przekierowac standardowe wejscie, zeby bylo z pliku
+        // } else {
+        //     //todo: sprobowac wykonac polecenie
+        // }
+    } else {
+        //todo: sprobowac uruchomic przekazane polecenie
+    }
+
     // zmienne potrzebne do przechowywania elementow polecenia (do parsowania)
     char **arr = NULL;
     int max_arr_size = 0, current_arr_size = 0;
@@ -114,7 +132,7 @@ int main(int argc, char *argv[]) {
             current_string = NULL;
         }
         if (one_char == '\n' || one_char == EOF) { // jezeli wczytano \n lub EOF to nalezy wkonac polecenie
-            //TODO: wykonywanie polecenia
+            //todo: wykonywanie polecenia
         } else if (one_char != ' ') { // jezeli byl wczytany inny znak, to nalezy go dodac do [current_string]
             add_char_to_string(&current_string, &current_string_length, &one_char);
         }
