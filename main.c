@@ -158,7 +158,7 @@ int main(int argc, char *argv[]) {
     char **arr = NULL;
     int max_arr_size = 0, current_arr_size = 0;
 
-    // czytanie elemento polecenia
+    // czytanie elementow polecenia
     char *current_string = NULL;
     int current_string_length = 0;
     char one_char;
