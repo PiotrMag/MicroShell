@@ -186,10 +186,12 @@ int main(int argc, char *argv[]) {
     char **arr = NULL;
     int max_arr_size = 0, current_arr_size = 0;
 
-    // czytanie elementow polecenia
+    // zmienne potrzebne do czytania poszczegolnych znakow i elementow polecenia
     char *current_string = NULL;
     int current_string_length = 0;
     char one_char;
+
+    // czytanie znakow
     do {
         one_char = fgetc(stdin);
 
@@ -201,7 +203,7 @@ int main(int argc, char *argv[]) {
 
         // sprawdzenie, czy podany zostal znak oddzielajacy poszczegolne elementy polecenia
         if (one_char == ' ' || one_char == '\n' || one_char == EOF) { // jezeli wczytano odpowiedni znak, to nalezy uznac, ze jest to koniec elementu
-            if (current_string != NULL && current_string != "" /*&& !isspace(current_string)*/) {
+            if (current_string != NULL && current_string != "") {
                 int result = add_element_to_array(&arr, &max_arr_size, &current_arr_size, current_string);
                 if (result == -1) { // byl blad przy probie dodania elementu do tablicy
                     printf("Byl blad przy dodawaniu elementu do tablicy (main loop)");
@@ -213,12 +215,20 @@ int main(int argc, char *argv[]) {
 
         // sprawdzenie, czy podany zostal znak powodujacy wykonanie polecenia
         if (one_char == '\n' || one_char == EOF) { 
-            //todo: wykonywanie polecenia (parsowanie, wykonanie itp.)
+            
+            // zabezpieczenie przed pustymi tablicami
+            if (current_arr_size > 0) {
+                //todo: wykonywanie polecenia (parsowanie, wykonanie itp.)
+            }
+            
+            // wyczyszczenie tablicy (w ktorej przechowywane sa elementy obecnego polecenia)
             printf("clear len:%d\n", current_arr_size);
             clear_string_array(&arr, &max_arr_size, &current_arr_size);
+
         } else if (one_char != ' ') { // jezeli byl wczytany inny znak, to nalezy go dodac do [current_string]
             add_char_to_string(&current_string, &current_string_length, &one_char);
         }
+        
     } while (one_char != EOF);
     
     return EXIT_SUCCESS;
