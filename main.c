@@ -103,6 +103,34 @@ int add_char_to_string(char **str, int *length, char *new_char) {
 }
 
 /*
+Funkcja czyszczaca tablice string
+
+Zwalnia pamiec zajmowana przez poszczegolne elementy tablicy
+a potem zwalnia pamiec zajmowana przez sama tablice. Odpowiednie 
+wskazniki sa ustawiane na NULL
+*/
+void clear_string_array(char ***arr, int *max_arr_size, int *current_arr_size) {
+
+    // zmienna pomocnicza do iterowania
+    int i;
+
+    // zwolnienie pamieci zajmowanej przez poszczegolne elementy string
+    for (i = 0; i < *current_arr_size; i++) {
+        // printf("free: %s\n", (*arr)[i]);
+        free((*arr)[i]);
+        (*arr)[i] = NULL;
+    }
+
+    // zwolnienie pamieci zajmowanej przez tablice string
+    free(*arr);
+    *arr = NULL;
+
+    // wyzerowanie zmiennych przekazanych przez parametr do funkcji
+    *max_arr_size = 0;
+    *current_arr_size = 0;
+}
+
+/*
 Funkcja testujaca dzialanie funkcji [add_element_to_array]
 Probuje dodac kilka elementow i je wypisac
 */
@@ -185,17 +213,13 @@ int main(int argc, char *argv[]) {
 
         // sprawdzenie, czy podany zostal znak powodujacy wykonanie polecenia
         if (one_char == '\n' || one_char == EOF) { 
-            //todo: wykonywanie polecenia
+            //todo: wykonywanie polecenia (parsowanie, wykonanie itp.)
+            printf("clear len:%d\n", current_arr_size);
+            clear_string_array(&arr, &max_arr_size, &current_arr_size);
         } else if (one_char != ' ') { // jezeli byl wczytany inny znak, to nalezy go dodac do [current_string]
             add_char_to_string(&current_string, &current_string_length, &one_char);
         }
     } while (one_char != EOF);
-
-    // testowe wypisanie elementow polecenia
-    int i; 
-    for (i = 0; i < current_arr_size; i++) {
-        printf("%s\n", arr[i]);
-    }
     
     return EXIT_SUCCESS;
 }
