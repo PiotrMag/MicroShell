@@ -164,10 +164,14 @@ int main(int argc, char *argv[]) {
     char one_char;
     do {
         one_char = fgetc(stdin);
-        if (ferror(stdin)) { // jezeli wystapil blad przy czytaniu znaku z stdin
+
+        // sprawdzenie, czy wsytapil blad przy czytaniu z stdin
+        if (ferror(stdin)) { 
             perror("Blad przy wczytywaniu znaku z stdin:");
             return EXIT_FAILURE;
         }
+
+        // sprawdzenie, czy podany zostal znak oddzielajacy poszczegolne elementy polecenia
         if (one_char == ' ' || one_char == '\n' || one_char == EOF) { // jezeli wczytano odpowiedni znak, to nalezy uznac, ze jest to koniec elementu
             if (current_string != NULL && current_string != "" /*&& !isspace(current_string)*/) {
                 int result = add_element_to_array(&arr, &max_arr_size, &current_arr_size, current_string);
@@ -178,13 +182,16 @@ int main(int argc, char *argv[]) {
             }
             current_string = NULL;
         }
-        if (one_char == '\n' || one_char == EOF) { // jezeli wczytano \n lub EOF to nalezy wkonac polecenie
+
+        // sprawdzenie, czy podany zostal znak powodujacy wykonanie polecenia
+        if (one_char == '\n' || one_char == EOF) { 
             //todo: wykonywanie polecenia
         } else if (one_char != ' ') { // jezeli byl wczytany inny znak, to nalezy go dodac do [current_string]
             add_char_to_string(&current_string, &current_string_length, &one_char);
         }
     } while (one_char != EOF);
 
+    // testowe wypisanie elementow polecenia
     int i; 
     for (i = 0; i < current_arr_size; i++) {
         printf("%s\n", arr[i]);
