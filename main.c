@@ -2,6 +2,8 @@
 #include <stdio.h>
 #include <string.h>
 #include <ctype.h>
+#include <fcntl.h>
+#include <unistd.h>
 
 /*
 Funkcja dodajaca element do tablicy i ewentualnie 
@@ -129,29 +131,28 @@ void test_string_list() {
 
 int main(int argc, char *argv[]) {
 
-    // wypisanie argumentow
-    int n;
-    for (n = 0; n < argc; n++) {
-        printf("%s ", argv[n]);
-    }
+    // zmienna pomocnicza, przechowujaca deskryptor pliku skryptu
+    // wstepnie ustawiona na -1, zaby w dalszej czesi programu
+    // mozna bylo sprawdzic, czy
+    int check_file = -1;
 
-    //! prawdopodobnie trzeba tylko sprawdzic, czy podany argument jest nazwa pliku
-    //! jezeli tak, to odpowiednio przekierowac stdin, zeby wczytywalo z pliku
-    //! mozliwe, ze trzeba bedzie w jakis sopsob przekierowac pozostale argumenty
-    //! jako standardowe wejscie, ale to trzeba jeszcze zbadac
-    // wlaczenie odpowiedniej wersji programu na bazie ilosci przekazanych argumentow
-    if (argc <= 1) { 
-        //todo: wlaczenie programu w trybie interaktywnym (standardowe wejscie jest z konsoli, czyli pewnie nie trzeba nic zmieniac)
-    } else if ( argc <= 2) {
-        //todo: sprawdzic, czy podany argument jest plikiem, czy poleceniem
-        // if (plik) {
-        //     //todo: przekierowac standardowe wejscie, zeby bylo z pliku
-        // } else {
-        //     //todo: sprobowac wykonac polecenie
-        // }
-    } else {
-        //todo: sprobowac uruchomic przekazane polecenie
-    }
+    // czytanie stdin z pliku jezeli podana zostala sciezka do pliku
+    if (argc >= 2) {
+
+        // otwarcie deskryptora w celu przekirowania stdin na plik, jezeli
+        // przy wykonywaniu porogramu podana zostala sciezka na plik skryptu
+        check_file = open(argv[1], O_RDONLY);
+
+        // jezeli blad przy otwarciu pliku skryptu
+        if (check_file < 0) {
+            perror("Nie udalo sie otworzyc pliku skryptu");
+            return EXIT_FAILURE;
+        }
+
+        // jezeli udalo sie otworzyc poprawnie deskryptor, to
+        // nalezy przekierowac stdin na plik
+        dup2(check_file, STDIN_FILENO);
+    } 
 
     // zmienne potrzebne do przechowywania elementow polecenia (do parsowania)
     char **arr = NULL;
