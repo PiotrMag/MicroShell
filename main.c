@@ -6,51 +6,97 @@
 /*
 Funkcja dodajaca element do tablicy i ewentualnie 
 zwiekszajaca rozmiar tablicy na 2 razy wiekszy 
+
+W przypadku kiedy funkcja wykryje, ze obecny rozmiar tablicy nie jest
+w stanie pomiescic dodatkowego elementu, zajmowana przez tablice pamiec
+jest reallokowana na rozmiar 2 razy wiekszy, a nowy element jest 
+dodawany na pierwszym wolnym miejscu
 */
 int add_element_to_array(char ***arr, int *max_arr_size, int *current_arr_size, char *new_element)  {
+    
     // sprawdzenie, czy jest potrzeba reallokacji
     if ((*current_arr_size) >= (*max_arr_size)) {
+
+        // zmienna pomocnicza
         int new_size = (*max_arr_size) * 2;
+
+        // sprawdzenie, czy przypadkiem rozmiar tablicy
+        // byl == 0; w takim przypadku zmienna pomoocnicza
+        // [new_size] bedzie == 0, wiec trzeba recznie zmienic
+        // jej wartosc
         if (new_size == 0) new_size = 1;
-        // trzeba zwiekszyc rozmiar tablicy
+
+        // proba reallokacji pamieci
         char **new_arr = realloc((*arr), new_size* sizeof(char*));
-        if (new_arr != NULL) { // jezeli udalo sie rallokowac
-            (*max_arr_size) = new_size;
-            (*arr) = new_arr;
-        } else {
-            return -1; // nie udalo sie reallokowac tablicy
+
+        if (new_arr == NULL) { // jezeli nie udalo sie rallokowac
+            return -1; 
         }
+
+        // zmiana wartosci zmiennej [max_arr_size] na nowa wielkosc tablicy
+        (*max_arr_size) = new_size;
+
+        // przypisanie nowego wskaznika na tablice w miejsce starego wskaznika
+        (*arr) = new_arr;
     }
+
     // dodanie nowego elementu na odpowiednie miejsce
-    (*arr)[*current_arr_size] = new_element; //TODO: naprawic
+    (*arr)[*current_arr_size] = new_element;
     (*current_arr_size) += 1;
     return 0;
 }
 
 /*
 Funkcja dodajaca znak do danego char*
+
+Funkcja reallokuje zajmowana przez char* pamiec tak, aby pomiescila
+ona dodatkowy jeden znak
 */
+//todo: moze trzeba przerobic, zeby nie trzeba bylo podawac parametru [length]
 int add_char_to_string(char **str, int *length, char *new_char) {
+
     // sprawdzenie, czy obecnie string jest pusty
     if (*str == NULL || length == 0) {
+
+        // reallokacja pamieci tak, zeby mogla pomiescic jeden znak (char) '\0'
         char *new_str = realloc((*str), sizeof(char));
+
+        // jezeli reallokacja nie powiodla sie
         if (new_str == NULL) {
             return -1;
         }
+
+        // przepisanie wskaznika na nowy
         (*str) = new_str;
+
+        // zapisanie znaku konca string
         (*str)[0] = '\0';
+
+        // zapisanie nowej dlugosci string
         *length = 1;
     }
+
+    // zmienna pomocnicza
     int new_size = (*length) + 1;
+
+    // reallokacja pamiesci zmiennej [str]
     char *new_str = realloc((*str), sizeof(char) * new_size);
+
+    // jezeli byl blad podczas reallokacji
     if (new_str == NULL) {
         return -1;
     }
+
+    // zapisanie nowego wskaznika w miejsce starego wskaznika
     (*str) = new_str;
+
     // dodanie znaku na koniec
     (*str)[*length-1] = *new_char;
     (*str)[*length] = '\0';
+
+    // zapisanie nowej dlugosci [str] w zmiennej [length]
     *length = new_size;
+
     return 0;
 }
 
@@ -90,7 +136,7 @@ int main(int argc, char *argv[]) {
     }
 
     //! prawdopodobnie trzeba tylko sprawdzic, czy podany argument jest nazwa pliku
-    //! jezeli tak, to odpowiednio przekirowac stdin, zeby wczytywalo z pliku
+    //! jezeli tak, to odpowiednio przekierowac stdin, zeby wczytywalo z pliku
     //! mozliwe, ze trzeba bedzie w jakis sopsob przekierowac pozostale argumenty
     //! jako standardowe wejscie, ale to trzeba jeszcze zbadac
     // wlaczenie odpowiedniej wersji programu na bazie ilosci przekazanych argumentow
