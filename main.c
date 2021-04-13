@@ -191,6 +191,11 @@ int main(int argc, char *argv[]) {
     int current_string_length = 0;
     char one_char;
 
+    // wypisanie prompta (jezeli nie jest czytanie z pliku)
+    if (check_file < 0) {
+        printf(">> ");
+    }
+
     // czytanie znakow
     do {
         one_char = fgetc(stdin);
@@ -224,6 +229,11 @@ int main(int argc, char *argv[]) {
             // wyczyszczenie tablicy (w ktorej przechowywane sa elementy obecnego polecenia)
             printf("clear len:%d\n", current_arr_size);
             clear_string_array(&arr, &max_arr_size, &current_arr_size);
+
+            // wypisanie prompta jezeli byl nacisniety enter (i jezeli nie jest czytanie z pliku)
+            if (one_char == '\n' && check_file < 0) {
+                printf(">> ");
+            }
 
         } else if (one_char != ' ') { // jezeli byl wczytany inny znak, to nalezy go dodac do [current_string]
             add_char_to_string(&current_string, &current_string_length, &one_char);
