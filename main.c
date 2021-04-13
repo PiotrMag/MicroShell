@@ -230,13 +230,17 @@ int main(int argc, char *argv[]) {
 
         // sprawdzenie, czy wsytapil blad przy czytaniu z stdin
         if (ferror(stdin)) { 
+
             // jezeli jest ustawiono flaga, to znaczy, ze blad [fgetc] by spowodowany sygnalem
             if (flag_show_history) {
+
                 //todo: wyswietlic historie polecen
+                clearerr(stdin); // wyczyszczenie flag bledu ze standardowego wejscia
                 printf("historia\n");
-                flag_show_history = 0;
+                flag_show_history = 0; // wyzerowanie flagi, zeby moz czytac ewentualne bledy na stdin
                 printf(">> ");
-                continue;
+                continue; // pominiecie dalszej czesci kodu, zeby nie ustawaic do_job na 0 w warunku (on_char == EOF)
+                
             } else {
                 perror("Blad przy wczytywaniu znaku z stdin:");
                 return EXIT_FAILURE;
