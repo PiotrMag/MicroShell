@@ -4,6 +4,9 @@
 #include <ctype.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <signal.h>
+
+short flag_show_history = 0;
 
 /*
 Funkcja dodajaca element do tablicy i ewentualnie 
@@ -157,7 +160,29 @@ void test_string_list() {
     free(arr);
 }
 
+void show_history(int signum) {
+    // ustawienie flagi, zeby wyswietlic historie w funkcji main
+    flag_show_history = 1;
+}
+
 int main(int argc, char *argv[]) {
+
+    struct sigaction sa = {
+        .sa_handler = show_history,
+        .sa_flags = 0,
+    };
+
+    // wyczyszczenie signal set
+    if (sigemptyset(&sa.sa_mask) < 0) {
+        perror("Nie udalo sie ustawic signal set na empty");
+        return EXIT_FAILURE;
+    }
+
+    // ustawienie obslugi sygnalu
+    if (sigaction(SIGQUIT, &sa, NULL) < 0) {
+        perror("Nie udalo sie ustawic obslugi sygnalu");
+        return EXIT_FAILURE;
+    }
 
     // zmienna pomocnicza, przechowujaca deskryptor pliku skryptu
     // wstepnie ustawiona na -1, zaby w dalszej czesi programu
@@ -196,14 +221,26 @@ int main(int argc, char *argv[]) {
         printf(">> ");
     }
 
+    // zmienna mowiaca o zakonczeniu iteracji
+    short do_job = 1;
+
     // czytanie znakow
     do {
         one_char = fgetc(stdin);
 
         // sprawdzenie, czy wsytapil blad przy czytaniu z stdin
         if (ferror(stdin)) { 
-            perror("Blad przy wczytywaniu znaku z stdin:");
-            return EXIT_FAILURE;
+            // jezeli jest ustawiono flaga, to znaczy, ze blad [fgetc] by spowodowany sygnalem
+            if (flag_show_history) {
+                //todo: wyswietlic historie polecen
+                printf("historia\n");
+                flag_show_history = 0;
+                printf(">> ");
+                continue;
+            } else {
+                perror("Blad przy wczytywaniu znaku z stdin:");
+                return EXIT_FAILURE;
+            }
         }
 
         // sprawdzenie, czy podany zostal znak oddzielajacy poszczegolne elementy polecenia
@@ -238,8 +275,12 @@ int main(int argc, char *argv[]) {
         } else if (one_char != ' ') { // jezeli byl wczytany inny znak, to nalezy go dodac do [current_string]
             add_char_to_string(&current_string, &current_string_length, &one_char);
         }
+
+        if (one_char == EOF) {
+            do_job = 0;
+        }
         
-    } while (one_char != EOF);
+    } while (do_job);
     
     return EXIT_SUCCESS;
 }
