@@ -8,6 +8,8 @@
 
 short flag_show_history = 0;
 
+char *HISTORY_FILE_NAME = ".microshell_history";
+
 /*
 Funkcja dodajaca element do tablicy i ewentualnie 
 zwiekszajaca rozmiar tablicy na 2 razy wiekszy 
@@ -234,13 +236,59 @@ int main(int argc, char *argv[]) {
             // jezeli jest ustawiono flaga, to znaczy, ze blad [fgetc] by spowodowany sygnalem
             if (flag_show_history) {
 
-                //todo: wyswietlic historie polecen
                 clearerr(stdin); // wyczyszczenie flag bledu ze standardowego wejscia
-                printf("historia\n");
+                printf(" Historia\n");
+
+                // pobranie sciezki do katalogu domowego uzytkownika
+                char *home_dir = getenv("HOME");
+
+                // sprawdzenie, czy zostala zwrocona poprawna wartosc (jezeli nie to wyswietlic komunikat)
+                if (home_dir == NULL) {
+                    printf("   [BRAK ZMIENNEJ HOME]\n");
+
+                } else {
+                    // otworzyc plik z historia
+                    char file_path[strlen(home_dir) + strlen(HISTORY_FILE_NAME) + 1];
+                    strcpy(file_path, home_dir);
+                    strcat(file_path, "/");
+                    strcat(file_path, HISTORY_FILE_NAME);
+                    FILE *history_file = fopen(file_path, "r");
+
+                    // jezeli pliku z historia nie ma
+                    if (history_file == NULL) {
+                        printf("   [Nie ma pliku z historia w: %s]\n", home_dir);
+                    } 
+                    
+                    // jezeli plik z historia jest, to wyswietlic jego zawartosc
+                    else {
+                        // zmienna pomocnicza
+                        char one_history_char;
+
+                        // zmienna pomocnicza do poprawnego wyswietlania wciecia w konsoli
+                        short indent = 1;
+
+                        // czytanie znakow z pliku z historia az do EOF
+                        while ((one_char = fgetc(history_file)) != EOF) {
+                            if (indent) {
+                                indent = 0;   
+                                printf("   ");
+                            }
+
+                            printf("%c", one_char);
+
+                            if (one_char == '\n') {
+                                indent = 1;
+                            }
+                        }
+
+                        fclose(history_file);
+                    }
+                }
+
                 flag_show_history = 0; // wyzerowanie flagi, zeby moz czytac ewentualne bledy na stdin
                 printf(">> ");
                 continue; // pominiecie dalszej czesci kodu, zeby nie ustawaic do_job na 0 w warunku (on_char == EOF)
-                
+
             } else {
                 perror("Blad przy wczytywaniu znaku z stdin:");
                 return EXIT_FAILURE;
