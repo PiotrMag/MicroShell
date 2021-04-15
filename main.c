@@ -312,10 +312,18 @@ int main(int argc, char *argv[]) {
             
             // zabezpieczenie przed pustymi tablicami
             if (current_arr_size > 0) {
-                //todo: wykonywanie polecenia (parsowanie, wykonanie itp.)
+                
+                // jezeli pierwszy znak pierwszego elementu to "#" to nalezy ignorowac linijke
+                // odwolanie do pierwszego znaku pierwszego elemetu jest bezpieczne
+                // bo puste elementy nie sa dodawane do listy
+                if (arr[0][0] != '#') {
+                    printf("polecenie: dlugosc: %d\n", current_arr_size);
+                    //todo: wykonywanie polecenia (parsowanie, wykonanie itp.)
+                }
             }
             
             // wyczyszczenie tablicy (w ktorej przechowywane sa elementy obecnego polecenia)
+            // po wykonaniu polecenia
             printf("clear len:%d\n", current_arr_size);
             clear_string_array(&arr, &max_arr_size, &current_arr_size);
 
