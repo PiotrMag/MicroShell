@@ -508,11 +508,18 @@ int main(int argc, char *argv[]) {
                                         }
                                     }
 
+<<<<<<< HEAD
                                     // wykonanie polecenia, tylko jezeli wartosc znacznika poczatku podpolecenia 
                                     // [command_start] jest mniejsza lub rowna wartosi znacznika konca podpolecenia
                                     // [command_end] 
                                     //
                                     // gdyby bylo inaczej, to oznaczalo by to puste podpolecenie
+=======
+                                    // wykonanie polecenia, tylko jezeli znaczniku poczatku i konca polecenia
+                                    // [command_start] i [command_end] sa od siebie rozne
+                                    //
+                                    // gdyby byly takie same, to oznaczaloby to puste podpolecenie
+>>>>>>> origin/master
                                     // np. "| test t-l", "a | | test" itp.
                                     if (command_start <= command_end) {
 
