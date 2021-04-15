@@ -162,6 +162,11 @@ void test_string_list() {
     free(arr);
 }
 
+/*
+Handler przerwania SIGQUIT
+Ustawia flage [flag_show_history] na true, a samo wyswietlenie historii
+dzieje sie w funkcji [main]
+*/
 void show_history(int signum) {
     // ustawienie flagi, zeby wyswietlic historie w funkcji main
     flag_show_history = 1;
@@ -317,11 +322,13 @@ int main(int argc, char *argv[]) {
                 // odwolanie do pierwszego znaku pierwszego elemetu jest bezpieczne
                 // bo puste elementy nie sa dodawane do listy
                 if (arr[0][0] != '#') {
-                    printf("polecenie: dlugosc: %d\n", current_arr_size);
+                    //todo: zapisanie wykonanego polecenia w historii (nawet jezeli jest z bledem)
+
                     //todo: wykonywanie polecenia (parsowanie, wykonanie itp.)
                 }
+
             }
-            
+
             // wyczyszczenie tablicy (w ktorej przechowywane sa elementy obecnego polecenia)
             // po wykonaniu polecenia
             printf("clear len:%d\n", current_arr_size);
