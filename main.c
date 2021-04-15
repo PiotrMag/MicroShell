@@ -9,6 +9,7 @@
 short flag_show_history = 0;
 
 char *HISTORY_FILE_NAME = ".microshell_history";
+short HISTORY_LINE_LIMIT = 20;
 
 /*
 Funkcja dodajaca element do tablicy i ewentualnie 
@@ -160,6 +161,32 @@ void test_string_list() {
     }
 
     free(arr);
+}
+
+/*
+Funkcja sprawdzajaca, czy podany tekst jest pusty (whitespace)
+
+Przeglada poszczegolne znaki tekstu, jezeli trafi sie znak niebedacy
+typu whitespace, to tekst traktowany jest jako niepusty.
+Jezeli wszystkie znaki tekstu sa typu whitespace to tekst jest pusty
+*/
+short is_empty(char *str) {
+
+    // jezeli wskaznik == NULL to jest pusty tekst
+    if (str == NULL) {
+        return 1;
+    }
+
+    while (*str != '\0') {
+
+        // jezeli trafi sie znak niebedacy whitespace, to tekst nie jest pusty
+        if (!isspace(*str)) {
+            return 0;
+        }
+        str++;
+    }
+
+    return 1;
 }
 
 /*
@@ -322,7 +349,113 @@ int main(int argc, char *argv[]) {
                 // odwolanie do pierwszego znaku pierwszego elemetu jest bezpieczne
                 // bo puste elementy nie sa dodawane do listy
                 if (arr[0][0] != '#') {
-                    //todo: zapisanie wykonanego polecenia w historii (nawet jezeli jest z bledem)
+
+                    // zapisanie wykonywanego polecenia tylko jezeli program wykonywany jest w trybie interaktywnym
+                    // w trybie skryptu nie ma potrzeby zapisaywania historii wykonanych polecen
+                    if (check_file < 0) {
+
+                        // pobranie sciezki do katalogu domowego uzytkownika
+                        char *home_dir = getenv("HOME");
+
+                        // zapisanie historii tylko jezeli istnieje sciezka domowa
+                        if (home_dir != NULL) {
+
+                            // czytanie pliku historii w celu sprawdzenia ilosci zapisanych polecen
+                            char file_path[strlen(home_dir) + strlen(HISTORY_FILE_NAME) + 1];
+                            strcpy(file_path, home_dir);
+                            strcat(file_path, "/");
+                            strcat(file_path, HISTORY_FILE_NAME);
+                            FILE *history_file = fopen(file_path, "r");
+
+                            // zmienne pomocnicze
+                            char **copying_arr = NULL;
+                            char *one_line = NULL;
+                            int one_line_length = 0;
+                            int current_copying_arr_length = 0;
+                            int copying_arr_maximum_size = 0;
+
+                            // jezeli istnieje plik z historia to nalezy odczytac liczbe polecen w nim zapisanych
+                            if (history_file != NULL) {
+                                
+                                // zmienne pomocnicze
+                                // short flag_was_not_empty = 0;
+                                char file_char;
+
+                                do {
+                                    file_char = fgetc(history_file);
+
+                                    if (file_char == '\n' || file_char == EOF) {
+
+                                        // sprawdzenie, czy wczytana linia nie jest pusta
+                                        if (!is_empty(one_line)) {
+                                            add_element_to_array(&copying_arr, &copying_arr_maximum_size, &current_copying_arr_length, one_line);
+                                        } else {
+                                            if (one_line != NULL) {
+                                                free(one_line);
+                                            }
+                                        }
+
+                                        one_line = NULL;
+
+                                    } else {
+                                        
+                                        // jezeli wczytany zostal normalny znak, to nalezy go dodac do tekstu
+                                        add_char_to_string(&one_line, &one_line_length, &file_char);
+                                    }
+
+                                } while (file_char != EOF);
+
+                                fclose(history_file);
+                            }
+
+                            // zapisanie polecen do plik z historia
+                            history_file = fopen(file_path, "w");
+                            if (history_file != NULL) {
+
+                                // zmienna pomocnicza, przechowujaca offset od ktorego nalezy
+                                // zaczac przepisywanie starych polecen historii z tablicy [copying_arr]
+                                // do pliku
+                                //
+                                // jezeli liczba linii w pliku historii przekroczy limit [HISTORY_LINE_LIMIT]
+                                // to offset bedzie dodatni, co spowoduje wyrzucenie najstarszych
+                                // wpisow z historii i dodanie nowych
+                                short line_offset = current_copying_arr_length - HISTORY_LINE_LIMIT + 1;
+                                if (line_offset < 0) {
+                                    line_offset = 0;
+                                }
+
+                                // przepisanie starych polecen historii z powrotem do pliku
+                                short i;
+                                for (i = line_offset; i < current_copying_arr_length; i++) {
+
+                                    one_line = copying_arr[i];
+                                    while (*one_line != '\0') {
+                                        fputc(*one_line, history_file);
+                                        one_line++;    
+                                    }              
+                                    fputc('\n', history_file);                      
+                                }
+
+                                // zapisanie nowego polecenia na koncu pliku
+                                for (i = 0; i < current_arr_size; i++) {
+                                    one_line = arr[i];
+                                    while (*one_line != '\0') {
+                                        fputc(*one_line, history_file);
+                                        one_line++;
+                                    }
+
+                                    // wypisanie spacji rozdzielajacej elementy polecenia
+                                    if (i != current_arr_size - 1) {
+                                        fputc(' ', history_file);
+                                    }
+                                }
+                                fputc('\n', history_file);
+
+                                fclose(history_file);
+                            }
+                        }
+                        
+                    }
 
                     //todo: wykonywanie polecenia (parsowanie, wykonanie itp.)
                 }
