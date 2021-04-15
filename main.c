@@ -5,6 +5,8 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <signal.h>
+#include <errno.h>
+#include <sys/wait.h>
 
 short flag_show_history = 0;
 
@@ -457,7 +459,93 @@ int main(int argc, char *argv[]) {
                         
                     }
 
-                    //todo: wykonywanie polecenia (parsowanie, wykonanie itp.)
+
+                    // utworzenie nowego procesu
+                    pid_t pid;
+                    pid = fork();
+
+                    // sprawdzenie, czy byl blad przy tworzeniu procesu
+                    if (pid < 0) {
+                        printf("   [Nie udalo sie utworzyc procesu]: %s\n", strerror(errno));
+
+                    } else {
+                        
+                        // wykonanie kodu nowego procesu
+                        if (pid == 0) {
+
+                            // zamkniecie deskryptora pliku ze skryptem 
+                            // nie ma potrzeby sprawdzac, czy wystapil blad
+                            close(check_file);
+
+                            // zmienne pomocnicze do przekierowywania wejscia/wyjscia z podpolecen
+                            int pipe_file; // deskryptor pliku sluzacego do przekierowywania wejscia/wyjscia
+                            short is_pipe_input = 0; // flaga mowiaca o tym, czy w kolejnym podpoleceniu ma byc przekirowane wejscie
+
+                            // zmienne pomocnicze, sluzace do odczytywania poszczegolnych podpolecen
+                            int command_start = 0;
+                            int command_end = -1; // [command_end] musi byc ustawiony na -1, zeby zabezpieczyc przed znakiem pipe jako pierwszym elementem polecenia
+
+                            // parsowanie polecenia
+                            int i = 0; 
+                            for (i = 0; i < current_arr_size; i++) {
+
+                                //todo: testy dzialania w przypadkach brzegowych
+                                // jezeli napotkano znak pipe | lub koniec poleceni to
+                                // nalezy odpowiednio zmodyfikowac wartosci zmiennych pomocniczych
+                                // i uruchomi wykonywanie podpolecenia
+                                if (strcmp(arr[i], "|") == 0 || i == current_arr_size-1) {
+
+                                    // odpowiednie ustawienie znacznika konca podpolecenia [command_end]
+                                    if (strcmp(arr[i], "|") == 0) {
+                                        command_end = i-1;
+
+                                    } else if (i == current_arr_size-1) {
+
+                                        if (arr[i] == "&") {
+                                            command_end = i-1;
+                                        } else {
+                                            command_end = i;
+                                        }
+                                    }
+
+                                    // wykonanie polecenia, tylko jezeli wartosc znacznika poczatku podpolecenia 
+                                    // [command_start] jest mniejsza lub rowna wartosi znacznika konca podpolecenia
+                                    // [command_end] 
+                                    //
+                                    // gdyby bylo inaczej, to oznaczalo by to puste podpolecenie
+                                    // np. "| test t-l", "a | | test" itp.
+                                    if (command_start <= command_end) {
+
+                                        int j;
+                                        for (j = command_start; j <= command_end; j++) {
+                                            //todo: odczytanie podpolecenia
+                                        }
+                                        //todo: fork i wykonanie polecenia
+                                    }
+
+                                    // odpowiednie przesuniecie znacznika poczatku podpolecenia
+                                    // przesuniecie znacznika [command_start] ma sens tylko
+                                    // w przypadku napotkania znaku pipe
+                                    if (strcmp(arr[i], "|") == 0) {
+                                        command_start = i+1;
+                                        //todo: ? przestawienie pliku pipe
+                                    }
+                                }
+                            }
+                        }
+                        
+                        // wykonanie kodu starego procesu
+                        if (pid > 0) {
+
+                            // jezeli ostatni znak polecenia != "&" to nalezy wykonac plecenie synchronicznie
+                            // czyli nalezy czekac na wykonanie nowego procesu
+                            if (arr[current_arr_size-1] != "&") {
+                                waitpid(pid, NULL, 0);
+                            }
+                        }
+
+                    }
+
                 }
 
             }
