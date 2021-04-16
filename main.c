@@ -261,6 +261,7 @@ int main(int argc, char *argv[]) {
     char *current_string = NULL;
     int current_string_length = 0;
     char one_char;
+    short is_in_quote = 0; // zmienna mowiaca o tym, czy obecnie czytany znak znajduje sie w bloku pomiedzy "..." (cudzyslowami)
 
     // wypisanie prompta (jezeli nie jest czytanie z pliku)
     if (check_file < 0) {
@@ -340,7 +341,7 @@ int main(int argc, char *argv[]) {
         }
 
         // sprawdzenie, czy podany zostal znak oddzielajacy poszczegolne elementy polecenia
-        if (one_char == ' ' || one_char == '\n' || one_char == EOF) { // jezeli wczytano odpowiedni znak, to nalezy uznac, ze jest to koniec elementu
+        if ((one_char == ' ' && !is_in_quote) || one_char == '\n' || one_char == EOF) { // jezeli wczytano odpowiedni znak, to nalezy uznac, ze jest to koniec elementu
             if (current_string != NULL && current_string != "") {
                 int result = add_element_to_array(&arr, &max_arr_size, &current_arr_size, current_string);
                 if (result == -1) { // byl blad przy probie dodania elementu do tablicy
@@ -673,8 +674,16 @@ int main(int argc, char *argv[]) {
                 print_prompt();
             }
 
-        } else if (one_char != ' ') { // jezeli byl wczytany inny znak, to nalezy go dodac do [current_string]
-            add_char_to_string(&current_string, &current_string_length, &one_char);
+        } else if (one_char != ' ' || is_in_quote) { // jezeli byl wczytany inny znak, to nalezy go dodac do [current_string]
+            if (one_char == '"') {
+                if (is_in_quote == 0) {
+                    is_in_quote = 1;
+                } else {
+                    is_in_quote = 0;
+                }
+            } else {
+                add_char_to_string(&current_string, &current_string_length, &one_char);
+            }
         }
 
         if (one_char == EOF) {
