@@ -8,7 +8,7 @@
 #include <errno.h>
 #include <sys/wait.h>
 
-short flag_show_history = 0;
+volatile short flag_show_history = 0;
 
 char *HISTORY_FILE_NAME = ".microshell_history";
 short HISTORY_LINE_LIMIT = 20;
@@ -192,6 +192,16 @@ short is_empty(char *str) {
 }
 
 /*
+Funkcja wypisujaca symbol promt'a
+
+Zostaly uzyte kolory dla zwiekszenia
+czytalnosci
+*/
+void print_prompt() {
+    printf("\n\033[48;5;11m\033[38;5;0m >> \033[0m ");
+}
+
+/*
 Handler przerwania SIGQUIT
 Ustawia flage [flag_show_history] na true, a samo wyswietlenie historii
 dzieje sie w funkcji [main]
@@ -254,7 +264,7 @@ int main(int argc, char *argv[]) {
 
     // wypisanie prompta (jezeli nie jest czytanie z pliku)
     if (check_file < 0) {
-        printf(">> ");
+        print_prompt();
     }
 
     // zmienna mowiaca o zakonczeniu iteracji
@@ -320,7 +330,7 @@ int main(int argc, char *argv[]) {
                 }
 
                 flag_show_history = 0; // wyzerowanie flagi, zeby moz czytac ewentualne bledy na stdin
-                printf(">> ");
+                print_prompt();
                 continue; // pominiecie dalszej czesci kodu, zeby nie ustawaic do_job na 0 w warunku (on_char == EOF)
 
             } else {
@@ -557,6 +567,8 @@ int main(int argc, char *argv[]) {
                                                 // kod podpolecenia
                                                 if (command_pid == 0) {
 
+                                                    //todo: usunac printf
+                                                    printf("\e[33;1mcomm: %s, len: %d, in: %d, out: %d\e[0m\n", subcommand[0], command_end - command_start + 1, input_pipe_mode, flag_output_to_pipe);
                                                     // przekierowanie wejscia jezeli jest taka potrzeba
                                                     if (input_pipe_mode == 0) {
                                                         close(first_pipe[0]);
@@ -571,7 +583,10 @@ int main(int argc, char *argv[]) {
 
                                                     // przekirowanie wyjscia jezeli jest taka potrzeba
                                                     if (flag_output_to_pipe) {
-                                                        if (input_pipe_mode == 1) {
+                                                        if (input_pipe_mode == 0) {
+                                                            dup2(first_pipe[1], STDOUT_FILENO);
+                                                            close(first_pipe[0]);
+                                                        } else if (input_pipe_mode == 1) {
                                                             dup2(second_pipe[1], STDOUT_FILENO);
                                                             close(second_pipe[0]);
                                                         } else if (input_pipe_mode == 2) {
@@ -584,24 +599,13 @@ int main(int argc, char *argv[]) {
                                                     }
 
                                                     // wykonanie podpolecenia i wykrycie bledow
-                                                    if (execvp(subcommand[0], subcommand)) {
+                                                    execvp(subcommand[0], subcommand);
 
-                                                        // pozamykanie deskryptorow wejsciowych pipe
-                                                        if (input_pipe_mode == 1) {
-                                                            close(first_pipe[0]);
-                                                        } else if (input_pipe_mode == 2) {
-                                                            close(second_pipe[0]);
-                                                        }
-
-                                                        // pozamykanie deskryptorow wyjsciowych pipe
-                                                        if (flag_output_to_pipe) {
-                                                            if (input_pipe_mode == 1) {
-                                                                close(second_pipe[1]);
-                                                            } else if (input_pipe_mode == 2) {
-                                                                close(first_pipe[1]);
-                                                            }
-                                                        }
-                                                    }
+                                                    // pozamykanie deskryptorow (dla pewnosci)
+                                                    close(first_pipe[0]);
+                                                    close(first_pipe[1]);
+                                                    close(second_pipe[0]);
+                                                    close(second_pipe[1]);
 
                                                     perror("err");
                                                     exit(EXIT_FAILURE);
@@ -648,13 +652,19 @@ int main(int argc, char *argv[]) {
                             if (first_pipe_result >= 0) {
                                 close(first_pipe[0]);
                                 close(first_pipe[1]);
+                                first_pipe[0] = -1;
+                                first_pipe[1] = -1;
                             }
 
                             // zamkniecie [scond_pipe] jezeli byl otwarty
                             if (second_pipe_result >= 0) {
                                 close(second_pipe[0]);
                                 close(second_pipe[1]);
+                                second_pipe[0] = -1;
+                                second_pipe[1] = -1;
                             }
+
+                            exit(EXIT_SUCCESS);
                         }
                         
                         // wykonanie kodu starego procesu
@@ -680,7 +690,7 @@ int main(int argc, char *argv[]) {
 
             // wypisanie prompta jezeli byl nacisniety enter (i jezeli nie jest czytanie z pliku)
             if (one_char == '\n' && check_file < 0) {
-                printf(">> ");
+                print_prompt();
             }
 
         } else if (one_char != ' ') { // jezeli byl wczytany inny znak, to nalezy go dodac do [current_string]
