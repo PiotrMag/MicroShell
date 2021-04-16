@@ -198,7 +198,7 @@ Zostaly uzyte kolory dla zwiekszenia
 czytalnosci
 */
 void print_prompt() {
-    printf("\n\033[48;5;11m\033[38;5;0m >> \033[0m ");
+    printf("\033[48;5;11m\033[38;5;0m >> \033[0m ");
 }
 
 /*
@@ -489,52 +489,54 @@ int main(int argc, char *argv[]) {
                             close(check_file);
 
                             // zmienne pomocnicze do przekierowywania wejscia/wyjscia z podpolecen
-                            int first_pipe[2]; // pierwszy pipe
-                            int second_pipe[2]; // drugi pipe
+                            int read_pipe[2]; // pierwszy pipe
+                            int write_pipe[2]; // drugi pipe
 
                             // utworzenie pipe'ow
-                            int first_pipe_result = pipe(first_pipe);
-                            int second_pipe_result = pipe(second_pipe);
+                            // int read_pipe_result = pipe(read_pipe);
+                            // int write_pipe_result = pipe(write_pipe);
 
-                            // jezeli udalo sie poprawnie utworzyc pipe'y, to nalezy dalej wykonywac program
-                            if (first_pipe_result >= 0 && second_pipe_result >= 0) {
+                            // reset pipe'ow
+                            read_pipe[0] = -1;
+                            read_pipe[1] = -1;
+                            write_pipe[0] = -1;
+                            write_pipe[1] = -1;
 
-                                short flag_output_to_pipe = 0; // flaga mowiaca czy wyjscie podpolecenia ma byc przekierowane do pipe
+                            int pipe_result = 1;
 
-                                // bardzo wazna zmienna mowiaca o tym, z ktorego pipe ma byc czytane wejscie obecnego podpolecenia
-                                // 0 <- wejscie podpolecenia ma byc z stdin
-                                // 1 <- wejscie podpolecenia ma byc z [first_pipe]
-                                // 2 <- wejscie podpolecenia ma byc z [second_pipe]
-                                short input_pipe_mode = 0; // pierwsze podpolecenie ma czytac z stdin
+                            // zmienne pomocnicze, sluzace do odczytywania poszczegolnych podpolecen
+                            int command_start = 0;
+                            int command_end = -1; // [command_end] musi byc ustawiony na -1, zeby zabezpieczyc przed znakiem pipe jako pierwszym elementem polecenia
 
-                                // zmienne pomocnicze, sluzace do odczytywania poszczegolnych podpolecen
-                                int command_start = 0;
-                                int command_end = -1; // [command_end] musi byc ustawiony na -1, zeby zabezpieczyc przed znakiem pipe jako pierwszym elementem polecenia
+                            // parsowanie polecenia
+                            int i = 0; 
+                            for (i = 0; i < current_arr_size; i++) {
 
-                                // parsowanie polecenia
-                                int i = 0; 
-                                for (i = 0; i < current_arr_size; i++) {
+                                //todo: testy dzialania w przypadkach brzegowych
+                                // jezeli napotkano znak pipe | lub koniec poleceni to
+                                // nalezy odpowiednio zmodyfikowac wartosci zmiennych pomocniczych
+                                // i uruchomi wykonywanie podpolecenia
+                                if (strcmp(arr[i], "|") == 0 || i == current_arr_size-1) {
 
-                                    //todo: testy dzialania w przypadkach brzegowych
-                                    // jezeli napotkano znak pipe | lub koniec poleceni to
-                                    // nalezy odpowiednio zmodyfikowac wartosci zmiennych pomocniczych
-                                    // i uruchomi wykonywanie podpolecenia
-                                    if (strcmp(arr[i], "|") == 0 || i == current_arr_size-1) {
+                                    // odpowiednie ustawienie znacznika konca podpolecenia [command_end]
+                                    // oraz [flag_output_to_pipe]
+                                    if (i == current_arr_size-1) {
 
-                                        // odpowiednie ustawienie znacznika konca podpolecenia [command_end]
-                                        // oraz [flag_output_to_pipe]
-                                        if (strcmp(arr[i], "|") == 0) {
+                                        if (arr[i] == "&") {
                                             command_end = i-1;
-                                            flag_output_to_pipe = 1;
-
-                                        } else if (i == current_arr_size-1) {
-
-                                            if (arr[i] == "&") {
-                                                command_end = i-1;
-                                            } else {
-                                                command_end = i;
-                                            }
+                                        } else if (arr[i] == "|") {
+                                            command_end = i-1;
+                                        } else {
+                                            command_end = i;
                                         }
+
+                                    } else if (strcmp(arr[i], "|") == 0) {
+                                        command_end = i-1;
+                                        pipe_result = pipe(write_pipe);
+                                    } 
+
+                                    // jezeli udalo sie utworzyc pipeprint
+                                    if (pipe_result >= 0) {
 
                                         // wykonanie polecenia, tylko jezeli wartosc znacznika poczatku podpolecenia 
                                         // [command_start] jest mniejsza lub rowna wartosi znacznika konca podpolecenia
@@ -568,101 +570,79 @@ int main(int argc, char *argv[]) {
                                                 if (command_pid == 0) {
 
                                                     //todo: usunac printf
-                                                    printf("\e[33;1mcomm: %s, len: %d, in: %d, out: %d\e[0m\n", subcommand[0], command_end - command_start + 1, input_pipe_mode, flag_output_to_pipe);
-                                                    // przekierowanie wejscia jezeli jest taka potrzeba
-                                                    if (input_pipe_mode == 0) {
-                                                        close(first_pipe[0]);
-                                                        close(second_pipe[0]);
-                                                    } else if (input_pipe_mode == 1) {
-                                                        dup2(first_pipe[0], STDIN_FILENO);
-                                                        close(first_pipe[1]);
-                                                    } else if (input_pipe_mode == 2) {
-                                                        dup2(second_pipe[0], STDIN_FILENO);
-                                                        close(second_pipe[1]);
+                                                    // printf("\e[33;1mcomm: %s, len: %d\e[0m\n", subcommand[0], command_end - command_start + 1);
+
+                                                    // zamkniecie niepotrzebnych koncow pipe'ow
+                                                    close(read_pipe[1]);
+                                                    close(write_pipe[0]);
+
+                                                    // odpowiednie przekierowanie wejscia/wyjscia
+                                                    if (read_pipe[0] >= 0) {
+                                                        //todo: usunac printf
+                                                        // printf("\033[38;5;40m-> in pipe\033[0m\n");
+                                                        dup2(read_pipe[0], STDIN_FILENO);
+                                                    }
+                                                    if (write_pipe[1] >= 0) {
+                                                        //todo: usunac printf
+                                                        // printf("\033[38;5;45m<- out pipe\033[0m\n");
+                                                        dup2(write_pipe[1], STDOUT_FILENO);
                                                     }
 
-                                                    // przekirowanie wyjscia jezeli jest taka potrzeba
-                                                    if (flag_output_to_pipe) {
-                                                        if (input_pipe_mode == 0) {
-                                                            dup2(first_pipe[1], STDOUT_FILENO);
-                                                            close(first_pipe[0]);
-                                                        } else if (input_pipe_mode == 1) {
-                                                            dup2(second_pipe[1], STDOUT_FILENO);
-                                                            close(second_pipe[0]);
-                                                        } else if (input_pipe_mode == 2) {
-                                                            dup2(first_pipe[1], STDOUT_FILENO);
-                                                            close(first_pipe[0]);
-                                                        }
-                                                    } else {
-                                                        close(first_pipe[1]);
-                                                        close(second_pipe[1]);
-                                                    }
-
-                                                    // wykonanie podpolecenia i wykrycie bledow
+                                                    // wykonanie podpolecenia
                                                     execvp(subcommand[0], subcommand);
 
                                                     // pozamykanie deskryptorow (dla pewnosci)
-                                                    close(first_pipe[0]);
-                                                    close(first_pipe[1]);
-                                                    close(second_pipe[0]);
-                                                    close(second_pipe[1]);
+                                                    close(read_pipe[0]);
+                                                    close(write_pipe[1]);
 
                                                     perror("err");
                                                     exit(EXIT_FAILURE);
                                                 }
 
                                                 if (command_pid > 0) {
+
+                                                    // bardzo wazny fragment kodu (zamkniecie deskryptorow, zeby podproces nie czekal)
+                                                    close(read_pipe[0]);
+                                                    close(read_pipe[1]);
                                                     waitpid(command_pid, NULL, 0);
                                                 }
                                             }
                                         }
 
-                                        // odpowiednie przesuniecie znacznika poczatku podpolecenia
-                                        // przesuniecie znacznika [command_start] ma sens tylko
-                                        // w przypadku napotkania znaku pipe
-                                        if (strcmp(arr[i], "|") == 0) {
-                                            command_start = i+1;
-
-                                            // przestawienie zmiennej [input_pipe_mode] na odpowiednia wartosc
-                                            // tak, zeby nastepne podpolecenie czytalo dane z wlasciwego pipe
-                                            if (input_pipe_mode == 0) {
-                                                input_pipe_mode = 1; // nastepne podpolecenie bedzie czytalo z [first_pipe]
-                                            } else if (input_pipe_mode == 1) {
-                                                input_pipe_mode = 2; // nastepne podpolecenie bedzie czytalo z [second_pipe]
-                                            } else {
-                                                input_pipe_mode = 1; // nastepne podpolecenie bedzie czytalo z [first_pipe]
-                                            }
-                                        }
-
-                                        // wyzerowanie flagi [flag_outout_to_pipe], bo nastepne podpolecenie moze byc
-                                        // ostatnim z calego polecenia, wiec nie trzeba bedzie przekirowywac wyjscia
-                                        // do jakiegos pipe
-                                        flag_output_to_pipe = 0;
+                                    } else {
+                                        //todo: informacja o bledzie pipe
                                     }
+
+                                    // przestawienie odpowiednio [command_start] dla znaku |
+                                    if (strcmp(arr[i], "|") == 0) {
+                                        command_start = i+1;
+                                    }
+
+                                    //todo: usuniecie odwolania do starego pipe read
+                                    close(read_pipe[0]);
+                                    close(read_pipe[1]);
+
+                                    //todo: zamienienie read pipe na write pipe
+                                    read_pipe[0] = write_pipe[0];
+                                    read_pipe[1] = write_pipe[1];
+
+                                    //todo: reset write pipe
+                                    write_pipe[0] = -1;
+                                    write_pipe[1] = -1;
                                 }
-
-                            } 
-                            
-                            // jezeli nie udalo sie otworzyc pipe'ow
-                            else { 
-                                //todo: ewentualnie wyswietlic komunikat
                             }
 
-                            // zamkniecie [first_pipe] jezeli byl otwarty
-                            if (first_pipe_result >= 0) {
-                                close(first_pipe[0]);
-                                close(first_pipe[1]);
-                                first_pipe[0] = -1;
-                                first_pipe[1] = -1;
+                            // na koniec sprawdwzenie, czy w [read_pipe] zostalo jeszcze cos do odczytania
+                            // moze nie jest to potrzebne
+                            if (read_pipe[0] >= 0) {
+                                //todo: wypisanie tego co jest w read_pipe na stdout
                             }
 
-                            // zamkniecie [scond_pipe] jezeli byl otwarty
-                            if (second_pipe_result >= 0) {
-                                close(second_pipe[0]);
-                                close(second_pipe[1]);
-                                second_pipe[0] = -1;
-                                second_pipe[1] = -1;
-                            }
+                            // zamkniecie pipe dla pewnosci
+                            close(read_pipe[0]);
+                            close(read_pipe[1]);
+                            close(write_pipe[0]);
+                            close(write_pipe[1]);
 
                             exit(EXIT_SUCCESS);
                         }
