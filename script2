@@ -1,3 +1,6 @@
 #!/home/tom/Desktop/SO/project/a.out
 cat script | grep --color=auto t
 echo test
+echo test
+echo test
+cat script2 | grep --color=auto echo

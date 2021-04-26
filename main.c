@@ -270,17 +270,29 @@ int main(int argc, char *argv[]) {
     // zmienna mowiaca o zakonczeniu iteracji
     short do_job = 1;
 
+    // zmienna pomocnicza przechowujaca rezultat wykonania funkcji read na deskryptorze pliku ze skryptem
+    short read_result = 1;
+
     // czytanie znakow
     do {
-        one_char = fgetc(stdin);
+        if (check_file >= 0) {
+            read_result = read(check_file, &one_char, sizeof(char));
+            if (read_result == 0) {
+                one_char = EOF;
+            }
+        } else {
+            one_char = fgetc(stdin);
+        }
 
         // sprawdzenie, czy wsytapil blad przy czytaniu z stdin
-        if (ferror(stdin)) { 
+        if ((check_file < 0 && ferror(stdin)) || (check_file >= 0 && read_result == -1)) { 
 
             // jezeli jest ustawiono flaga, to znaczy, ze blad [fgetc] by spowodowany sygnalem
             if (flag_show_history) {
 
-                clearerr(stdin); // wyczyszczenie flag bledu ze standardowego wejscia
+                if (check_file < 0) {
+                    clearerr(stdin); // wyczyszczenie flag bledu ze standardowego wejscia
+                }
                 printf(" Historia\n");
 
                 // pobranie sciezki do katalogu domowego uzytkownika
@@ -339,7 +351,6 @@ int main(int argc, char *argv[]) {
             }
         }
 
-        printf("%d ", one_char);
 
         // sprawdzenie, czy podany zostal znak oddzielajacy poszczegolne elementy polecenia
         if ((one_char == ' ' && !is_in_quote) || one_char == '\n' || one_char == EOF) { // jezeli wczytano odpowiedni znak, to nalezy uznac, ze jest to koniec elementu
@@ -350,7 +361,6 @@ int main(int argc, char *argv[]) {
                     return EXIT_FAILURE;
                 }
             }
-            printf("current string: %s\n", current_string);
             current_string = NULL;
         }
 
@@ -360,12 +370,6 @@ int main(int argc, char *argv[]) {
             // zabezpieczenie przed pustymi tablicami
             if (current_arr_size > 0) {
                 
-
-                int a;
-                for (a=0; a< current_arr_size; a++) {
-                    printf("\033[48;5;25m%s ", arr[a]);
-                }
-                printf("\033[0m\n");
                 // jezeli pierwszy znak pierwszego elementu to "#" to nalezy ignorowac linijke
                 // odwolanie do pierwszego znaku pierwszego elemetu jest bezpieczne
                 // bo puste elementy nie sa dodawane do listy
@@ -474,6 +478,8 @@ int main(int argc, char *argv[]) {
 
                                 fclose(history_file);
                             }
+
+                            clear_string_array(&copying_arr, &copying_arr_maximum_size, &current_copying_arr_length);
                         }
                         
                     }
@@ -493,8 +499,6 @@ int main(int argc, char *argv[]) {
                         
                         // wykonanie kodu nowego procesu
                         if (pid == 0) {
-
-                            clear_string_array(&arr, &max_arr_size, &current_arr_size);
 
                             struct sigaction sa = {
                                 .sa_handler = SIG_IGN,
@@ -539,8 +543,6 @@ int main(int argc, char *argv[]) {
                             int command_start = 0;
                             int command_end = -1; // [command_end] musi byc ustawiony na -1, zeby zabezpieczyc przed znakiem pipe jako pierwszym elementem polecenia
 
-                            printf("current arr size: %d\n", current_arr_size);
-
                             // parsowanie polecenia
                             int i = 0; 
                             for (i = 0; i < current_arr_size; i++) {
@@ -567,8 +569,6 @@ int main(int argc, char *argv[]) {
                                         pipe_result = pipe(write_pipe);
                                     } 
 
-                                    printf("command start: %d\n", command_start);
-                                    printf("command end: %d\n", command_end);
 
                                     // jezeli udalo sie utworzyc pipeprint
                                     if (pipe_result >= 0) {
