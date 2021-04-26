@@ -1,3 +1,3 @@
 #!/home/tom/Desktop/SO/project/a.out
-cat script | grep tom
-grep "test" -d >> text.txt
+cat script | grep --color=auto tom
+echo "testowy" | grep --color=auto te 
