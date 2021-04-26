@@ -1,3 +1,4 @@
+
 # Tresc zadania:
 
 ### Prosta powłoka tekstowa (shell):
@@ -8,7 +9,6 @@
 - `(8p)` możliwość tworzenia potoków o dowolnej długości przy pomocy znaku | 
 - `(8p)` historia poleceń - shell przechowuje (w zewnętrznym pliku w katalogu domowym użytkownika - tak ze historia powinna ”przetrwać” zakończenie shella) dokładna treść 20 poleceń, a wysłanie sygnału SIGQUIT powoduje wyświetlenie historii na standardowym wyjściu.
 
----
 # Podsumowanie wymagan:
 - Mozliwosc pisania prostych `skryptow`
 - Uruchomienie polecenia w tle przy pomocy znaku `&`
@@ -19,7 +19,6 @@
 - Historia ostatnich `20` polecen przy pomocy przerwania `SIGQUIT` (prawdopodobnie trzeba pisac do jakiegos dodatkowego pliku)
 - Uruchomienie shella bez argumentow powoduje wczytywanie ze standardowego wejscia
 
----
 # Prawdopodobna kolejnosc krokow:
 1. Wczytanie tresci polecenia do wykonania
 1. Logiczne rozdzielenie elementow polecenia poprzez znak spacji
@@ -30,10 +29,20 @@
 1. Zrobic `fork`
 1. Proba uruchomienia polecenia przy pomocy `exec`, jezeli jest blad, to wyswietlana jest o tym informacja i **dalsze wykonywanie jest przerywane**
 
----
 # Pytania, na ktore warto znalezc odpowiedz:
 - Jaka jest kolejnosc wykonywania operatorow `>>` oraz `|`
 - Czy w C jest biblioteka do latwego parsowania `string`
     - Mozna skorzystac z `strtok` w celu rozdzielenia polecenia a poszczegolne skladowe
 - Jak zrobic dynamiczna liste `string`
     - `realloc`
+
+# Co udalo sie zrobic:
+- Polecenia sa parsowane, a pozniej wykonywane przy pomocy `execvp`
+- Zrobione jest tworzenie potokow przy pomocy znaku `pipe |` (niemniej z tego co przeczytalem, to w normalnym bash-u wszystkie komendy z danego ciagu (`pipe`) sa wykonywane jednoczesnie - w przypadku mojego programu podpolecenia sa wykonywane sekwencyjnie)
+- Czysto teoretycznie zrobione jest wykonywanie polecen "w tle" poprzez podanie znaku `&` na koncu linii polecenia (zrobilem to jednak w taki sposob, ze jezeli polecenia wykonywane "w tle" cos wypisuja, to widac to w konsoli - mam nadzieje, ze ta funkcja dziala poprawnie)
+- Jest dzialajaca historia polecen (przy pomocy skrotu klawiszowego `ctrl + \` - przerwanie `SIGQUIT`), ktora przechowuje tresc 20 ostatnich polecen. 
+- Jest dzialajace wykonywanie prostych skryptow (dla nich historia nie jest zapisywana - bo ma to sens)
+- Jest zakonczenie czytania z pliku jezeli jest znak `EOF` (w przypadku czytania z linii polecen zdarza sie, ze trzeba wiecej niz raz podac EOF, zeby wykonywanie programu sie zakonczylo)
+
+# Czego nie zrobilem:
+- Przekierowywania wyjscia z polecenia do pliku przy pomocy `>>`
