@@ -62,7 +62,6 @@ Funkcja dodajaca znak do danego char*
 Funkcja reallokuje zajmowana przez char* pamiec tak, aby pomiescila
 ona dodatkowy jeden znak
 */
-//todo: moze trzeba przerobic, zeby nie trzeba bylo podawac parametru [length]
 int add_char_to_string(char **str, int *length, char *new_char) {
 
     // sprawdzenie, czy obecnie string jest pusty
@@ -313,15 +312,15 @@ int main(int argc, char *argv[]) {
                         short indent = 1;
 
                         // czytanie znakow z pliku z historia az do EOF
-                        while ((one_char = fgetc(history_file)) != EOF) {
+                        while ((one_history_char = fgetc(history_file)) != EOF) {
                             if (indent) {
                                 indent = 0;   
                                 printf("   ");
                             }
 
-                            printf("%c", one_char);
+                            printf("%c", one_history_char);
 
-                            if (one_char == '\n') {
+                            if (one_history_char == '\n') {
                                 indent = 1;
                             }
                         }
@@ -340,15 +339,18 @@ int main(int argc, char *argv[]) {
             }
         }
 
+        printf("%d ", one_char);
+
         // sprawdzenie, czy podany zostal znak oddzielajacy poszczegolne elementy polecenia
         if ((one_char == ' ' && !is_in_quote) || one_char == '\n' || one_char == EOF) { // jezeli wczytano odpowiedni znak, to nalezy uznac, ze jest to koniec elementu
-            if (current_string != NULL && current_string != "") {
+            if (current_string != NULL && strcmp(current_string, "") != 0) {
                 int result = add_element_to_array(&arr, &max_arr_size, &current_arr_size, current_string);
                 if (result == -1) { // byl blad przy probie dodania elementu do tablicy
                     printf("Byl blad przy dodawaniu elementu do tablicy (main loop)");
                     return EXIT_FAILURE;
                 }
             }
+            printf("current string: %s\n", current_string);
             current_string = NULL;
         }
 
@@ -358,6 +360,12 @@ int main(int argc, char *argv[]) {
             // zabezpieczenie przed pustymi tablicami
             if (current_arr_size > 0) {
                 
+
+                int a;
+                for (a=0; a< current_arr_size; a++) {
+                    printf("\033[48;5;25m%s ", arr[a]);
+                }
+                printf("\033[0m\n");
                 // jezeli pierwszy znak pierwszego elementu to "#" to nalezy ignorowac linijke
                 // odwolanie do pierwszego znaku pierwszego elemetu jest bezpieczne
                 // bo puste elementy nie sa dodawane do listy
@@ -477,13 +485,35 @@ int main(int argc, char *argv[]) {
 
                     // sprawdzenie, czy byl blad przy tworzeniu procesu
                     if (pid < 0) {
-                        //todo: moze trzeba sprawdzic, czy program jes t wtrybie czytania ze skryptu
-                        printf("   [Nie udalo sie utworzyc procesu]: %s\n", strerror(errno));
+                        if (check_file < 0) {
+                            printf("   [Nie udalo sie utworzyc procesu]: %s\n", strerror(errno));
+                        }
 
                     } else {
                         
                         // wykonanie kodu nowego procesu
                         if (pid == 0) {
+
+                            clear_string_array(&arr, &max_arr_size, &current_arr_size);
+
+                            struct sigaction sa = {
+                                .sa_handler = SIG_IGN,
+                                .sa_flags = 0,
+                            };
+
+                            // wyczyszczenie signal set
+                            if (sigemptyset(&sa.sa_mask) < 0) {
+                                perror("Nie udalo sie ustawic signal set na empty (w procesie polecenia)");
+                                return EXIT_FAILURE;
+                            }
+
+                            // ustawienie obslugi sygnalu
+                            if (sigaction(SIGQUIT, &sa, NULL) < 0) {
+                                if (check_file < 0) {
+                                    perror("Nie udalo sie ustawic obslugi sygnalu (w procesie polecenia)");
+                                }
+                                return EXIT_FAILURE;
+                            }
 
                             // zamkniecie deskryptora pliku ze skryptem 
                             // nie ma potrzeby sprawdzac, czy wystapil blad
@@ -509,11 +539,12 @@ int main(int argc, char *argv[]) {
                             int command_start = 0;
                             int command_end = -1; // [command_end] musi byc ustawiony na -1, zeby zabezpieczyc przed znakiem pipe jako pierwszym elementem polecenia
 
+                            printf("current arr size: %d\n", current_arr_size);
+
                             // parsowanie polecenia
                             int i = 0; 
                             for (i = 0; i < current_arr_size; i++) {
 
-                                //todo: testy dzialania w przypadkach brzegowych
                                 // jezeli napotkano znak pipe | lub koniec poleceni to
                                 // nalezy odpowiednio zmodyfikowac wartosci zmiennych pomocniczych
                                 // i uruchomi wykonywanie podpolecenia
@@ -523,9 +554,9 @@ int main(int argc, char *argv[]) {
                                     // oraz [flag_output_to_pipe]
                                     if (i == current_arr_size-1) {
 
-                                        if (arr[i] == "&") {
+                                        if (strcmp(arr[i],  "&") == 0) {
                                             command_end = i-1;
-                                        } else if (arr[i] == "|") {
+                                        } else if (strcmp(arr[i], "|") == 0) {
                                             command_end = i-1;
                                         } else {
                                             command_end = i;
@@ -535,6 +566,9 @@ int main(int argc, char *argv[]) {
                                         command_end = i-1;
                                         pipe_result = pipe(write_pipe);
                                     } 
+
+                                    printf("command start: %d\n", command_start);
+                                    printf("command end: %d\n", command_end);
 
                                     // jezeli udalo sie utworzyc pipeprint
                                     if (pipe_result >= 0) {
@@ -548,7 +582,7 @@ int main(int argc, char *argv[]) {
                                         if (command_start <= command_end) {
 
                                             // zmienna pomocnicza przechowujaca podpolecenie
-                                            char *subcommand[command_end - command_start + 2]; //! upewnic sie czy jest ok
+                                            char *subcommand[command_end - command_start + 2]; 
 
                                             // odczytanie podpolecenia, zeby moc je dalej przekazac do exec
                                             int j;
@@ -564,14 +598,18 @@ int main(int argc, char *argv[]) {
 
                                             // jezeli nie udalo sie wykonac fork'a
                                             if (command_pid < 0) {
-                                                //todo: wyswietlic komunikat i ewentualnie return
+                                                if (check_file < 0) {
+                                                    printf("   [Nie udalo sie utworzyc procesu]: %s", strerror(errno));
+                                                }
+                                                close(read_pipe[0]);
+                                                close(read_pipe[1]);
+                                                close(write_pipe[0]);
+                                                close(write_pipe[1]);
+                                                exit(EXIT_FAILURE);
                                             } else {
 
                                                 // kod podpolecenia
                                                 if (command_pid == 0) {
-
-                                                    //todo: usunac printf
-                                                    // printf("\e[33;1mcomm: %s, len: %d\e[0m\n", subcommand[0], command_end - command_start + 1);
 
                                                     // zamkniecie niepotrzebnych koncow pipe'ow
                                                     close(read_pipe[1]);
@@ -579,13 +617,9 @@ int main(int argc, char *argv[]) {
 
                                                     // odpowiednie przekierowanie wejscia/wyjscia
                                                     if (read_pipe[0] >= 0) {
-                                                        //todo: usunac printf
-                                                        // printf("\033[38;5;40m-> in pipe\033[0m\n");
                                                         dup2(read_pipe[0], STDIN_FILENO);
                                                     }
                                                     if (write_pipe[1] >= 0) {
-                                                        //todo: usunac printf
-                                                        // printf("\033[38;5;45m<- out pipe\033[0m\n");
                                                         dup2(write_pipe[1], STDOUT_FILENO);
                                                     }
 
@@ -611,32 +645,30 @@ int main(int argc, char *argv[]) {
                                         }
 
                                     } else {
-                                        //todo: informacja o bledzie pipe
+                                        if (check_file < 0) {
+                                            printf("   [Nie udalo sie utworzyc pipe]: %s", strerror(errno));
+                                        }
                                     }
 
                                     // przestawienie odpowiednio [command_start] dla znaku |
+                                    if (i == current_arr_size-1) {
+                                        if (strcmp(arr[i], "&") == 0) {
+                                            command_start = i+1;
+                                        }
+                                    }
                                     if (strcmp(arr[i], "|") == 0) {
                                         command_start = i+1;
                                     }
 
-                                    //todo: usuniecie odwolania do starego pipe read
                                     close(read_pipe[0]);
                                     close(read_pipe[1]);
 
-                                    //todo: zamienienie read pipe na write pipe
                                     read_pipe[0] = write_pipe[0];
                                     read_pipe[1] = write_pipe[1];
 
-                                    //todo: reset write pipe
                                     write_pipe[0] = -1;
                                     write_pipe[1] = -1;
                                 }
-                            }
-
-                            // na koniec sprawdwzenie, czy w [read_pipe] zostalo jeszcze cos do odczytania
-                            // moze nie jest to potrzebne
-                            if (read_pipe[0] >= 0) {
-                                //todo: wypisanie tego co jest w read_pipe na stdout
                             }
 
                             // zamkniecie pipe dla pewnosci
@@ -653,7 +685,7 @@ int main(int argc, char *argv[]) {
 
                             // jezeli ostatni znak polecenia != "&" to nalezy wykonac plecenie synchronicznie
                             // czyli nalezy czekac na wykonanie nowego procesu
-                            if (arr[current_arr_size-1] != "&") {
+                            if (strcmp(arr[current_arr_size-1], "&") != 0) {
                                 waitpid(pid, NULL, 0);
                             }
                         }
