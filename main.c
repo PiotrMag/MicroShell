@@ -191,6 +191,41 @@ short is_empty(char *str) {
 }
 
 /*
+Funkcja pomocnicza wyrzucajaca zewnetrzne cudzyslowy z tekstu
+
+Jezli tekst jest za krotki to zwroci oryginalny tekst (skopiowany do nowej pamieci)
+chyba, ze tekst == NULL, wtedy zwraca NULL
+
+Zwraca NULL, jezeli nie udalo sie zaallokowac miejsca w pamieci
+*/
+char *trim_quotes(char *src) {
+    if (src == NULL) {
+        return NULL;
+    }
+    int len = strlen(src)+1; // +1, zeby uwzglednic znak '\0'
+    if (len >= 2) { // sprawdzenie, czy na pewno sa minimum 3 znaki -> " " \0
+        if (src[0] == '"' && src[len-2] == '"') {
+            short new_len = len-2;
+            int start = 1;
+            char *new_str = (char*)malloc(new_len * sizeof(char));
+            if (new_str == NULL) {
+                return NULL;
+            }
+
+            int i;
+            for (i = 0; i < new_len-1; i++) {
+                new_str[i] = src[start+i];
+            }
+            new_str[new_len-1] = '\0';
+            return new_str;
+        }
+    } 
+    char *new_str = (char*)malloc(len * sizeof(char));
+    strcpy(new_str, src);
+    return new_str;
+}
+
+/*
 Funkcja wypisujaca symbol promt'a
 
 Zostaly uzyte kolory dla zwiekszenia
@@ -587,7 +622,7 @@ int main(int argc, char *argv[]) {
                                             // odczytanie podpolecenia, zeby moc je dalej przekazac do exec
                                             int j;
                                             for (j = command_start; j <= command_end; j++) {
-                                                subcommand[j - command_start] = arr[j];
+                                                subcommand[j - command_start] =  trim_quotes(arr[j]);
                                             }
 
                                             subcommand[command_end - command_start + 1] = NULL;
@@ -641,6 +676,14 @@ int main(int argc, char *argv[]) {
                                                     close(read_pipe[1]);
                                                     waitpid(command_pid, NULL, 0);
                                                 }
+                                            }
+
+                                            // czyszczenie tablicy subcommand, poniewaz zapisany w niej tekst 
+                                            // postal w wyniku funkcji trim_quotes, ktora zwraca nowo 
+                                            // zaallokowane zmienne
+                                            int w;
+                                            for (w = 0; w <= command_end - command_start; w++) {
+                                                free(subcommand[w]);
                                             }
                                         }
 
@@ -701,6 +744,10 @@ int main(int argc, char *argv[]) {
             // printf("clear len:%d\n", current_arr_size);
             clear_string_array(&arr, &max_arr_size, &current_arr_size);
 
+            // reset wartoscie zmiennej [is_in_quote], poniewaz w nowym poleceniu jej wartosc 
+            // powinna byc zresetowana
+            is_in_quote = 0;
+
             // wypisanie prompta jezeli byl nacisniety enter (i jezeli nie jest czytanie z pliku)
             if (one_char == '\n' && check_file < 0) {
                 print_prompt();
@@ -714,8 +761,8 @@ int main(int argc, char *argv[]) {
                     is_in_quote = 0;
                 }
             } else {
-                add_char_to_string(&current_string, &current_string_length, &one_char);
             }
+            add_char_to_string(&current_string, &current_string_length, &one_char);
         }
 
         if (one_char == EOF) {
